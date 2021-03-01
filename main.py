@@ -1,97 +1,105 @@
 import pygame
-from random import randrange as rand
+import random
+from random import randrange
 
+# константы
 WIDTH, HEIGHT = 1200, 800
-fps = 60
-# paddle settings
-paddle_w = 330
-paddle_h = 35
-paddle_speed = 15
-paddle = pygame.Rect(WIDTH // 2 - paddle_w // 2, HEIGHT - paddle_h - 10, paddle_w, paddle_h)
-# ball settings
-ball_radius = 20
-ball_speed = 6
-ball_rect = int(ball_radius * 2 ** 0.5)
-ball = pygame.Rect(rand(ball_rect, WIDTH - ball_rect), HEIGHT // 2, ball_rect, ball_rect)
-dx, dy = 1, -1
-# blocks settings
-block_list = [pygame.Rect(10 + 120 * i, 10 + 70 * j, 100, 50) for i in range(10) for j in range(4)]
-color_list = [(rand(30, 256), rand(30, 256), rand(30, 256)) for i in range(10) for j in range(4)]
+FPS = 60
+PW = 315
+PH = 40
+SPEED = 15
+PADDLE = pygame.Rect(WIDTH // 2 - PW // 2, HEIGHT - PH - 10, PW, PH)
 
 pygame.init()
 sc = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
-# background image
+
 img = pygame.image.load('Wallpaper.jpg').convert()
 
+sound1 = pygame.mixer.Sound("Music1.mp3")
+sound2 = pygame.mixer.Sound("Music2.mp3")
+sound3 = pygame.mixer.Sound("Music3.mp3")
+sound4 = pygame.mixer.Sound("Music4.mp3")
+sound5 = pygame.mixer.Sound("Music5.mp3")
 
-def detect_collision(dx, dy, ball, rect):
-    if dx > 0:
+music = [sound1, sound2, sound3, sound4, sound5]
+
+now_plaeing = random.choice(music)
+
+
+def collision(x, y, ball, rect):
+    if x > 0:
         delta_x = ball.right - rect.left
     else:
         delta_x = rect.right - ball.left
-    if dy > 0:
+    if y > 0:
         delta_y = ball.bottom - rect.top
     else:
         delta_y = rect.bottom - ball.top
 
     if abs(delta_x - delta_y) < 10:
-        dx, dy = -dx, -dy
+        x, y = -x, -y
     elif delta_x > delta_y:
-        dy = -dy
+        y = -y
     elif delta_y > delta_x:
-        dx = -dx
-    return dx, dy
+        x = -x
+    return x, y
+
 
 if __name__ == '__main__':
+    now_plaeing.play()
+
+    # задаем харатеристики мяча
+    radius_of_ball = 18
+    speed_of_ball = 5
+    rect_of_ball = int(radius_of_ball * 2 ** 0.5)
+    ball = pygame.Rect(randrange(rect_of_ball, WIDTH - rect_of_ball), HEIGHT // 2, rect_of_ball, rect_of_ball)
+    x, y = 1, -1
+
+    # задаем блоки
+    block_list = [pygame.Rect(8 + 120 * i, 8 + 70 * j, 100, 50) for i in range(10) for j in range(4)]
+    color_list = [(randrange(30, 256), randrange(30, 256), randrange(30, 256)) for i in range(10) for j in range(4)]
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit()
         sc.blit(img, (0, 0))
-        # drawing world
+        # карта
         [pygame.draw.rect(sc, color_list[color], block) for color, block in enumerate(block_list)]
-        pygame.draw.rect(sc, pygame.Color('darkorange'), paddle)
-        pygame.draw.circle(sc, pygame.Color('white'), ball.center, ball_radius)
-        # ball movement
-        ball.x += ball_speed * dx
-        ball.y += ball_speed * dy
-        # collision left right
-        if ball.centerx < ball_radius or ball.centerx > WIDTH - ball_radius:
-            dx = -dx
-        # collision top
-        if ball.centery < ball_radius:
-            dy = -dy
-        # collision paddle
-        if ball.colliderect(paddle) and dy > 0:
-            dx, dy = detect_collision(dx, dy, ball, paddle)
-            # if dx > 0:
-            #     dx, dy = (-dx, -dy) if ball.centerx < paddle.centerx else (dx, -dy)
-            # else:
-            #     dx, dy = (-dx, -dy) if ball.centerx >= paddle.centerx else (dx, -dy)
-        # collision blocks
-        hit_index = ball.collidelist(block_list)
-        if hit_index != -1:
-            hit_rect = block_list.pop(hit_index)
-            hit_color = color_list.pop(hit_index)
-            dx, dy = detect_collision(dx, dy, ball, hit_rect)
-            # special effect
-            hit_rect.inflate_ip(ball.width * 3, ball.height * 3)
-            pygame.draw.rect(sc, hit_color, hit_rect)
-            fps += 2
-        # win, game over
+        pygame.draw.rect(sc, pygame.Color('darkgreen'), PADDLE)
+        pygame.draw.circle(sc, pygame.Color('white'), ball.center, radius_of_ball)
+        # перемещение мяча
+        ball.x += speed_of_ball * x
+        ball.y += speed_of_ball * y
+
+        if ball.centerx < radius_of_ball or ball.centerx > WIDTH - radius_of_ball:
+            x = -x
+
+        if ball.centery < radius_of_ball:
+            y = -y
+
+        if ball.colliderect(PADDLE) and y > 0:
+            x, y = collision(x, y, ball, PADDLE)
+
+        index = ball.collidelist(block_list)
+        if index != -1:
+            rect = block_list.pop(index)
+            col = color_list.pop(index)
+            x, y = collision(x, y, ball, rect)
+
+            rect.inflate_ip(ball.width * 3, ball.height * 3)
+            pygame.draw.rect(sc, col, rect)
+            FPS += 2
+
         if ball.bottom > HEIGHT:
-            print('GAME OVER!')
             exit()
-        elif not len(block_list):
-            print('WIN!!!')
-            exit()
-        # control
+
         key = pygame.key.get_pressed()
-        if key[pygame.K_LEFT] and paddle.left > 0:
-            paddle.left -= paddle_speed
-        if key[pygame.K_RIGHT] and paddle.right < WIDTH:
-            paddle.right += paddle_speed
-        # update screen
+        if key[pygame.K_LEFT] and PADDLE.left > 0:
+            PADDLE.left -= SPEED
+        if key[pygame.K_RIGHT] and PADDLE.right < WIDTH:
+            PADDLE.right += SPEED
+
         pygame.display.flip()
-        clock.tick(fps)
+        clock.tick(FPS)
